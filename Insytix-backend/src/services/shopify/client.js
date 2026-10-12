@@ -2,18 +2,22 @@
 
 const axios = require("axios");
 
-/** Pull a human-readable message out of a Shopify error response. */
+/** Extract a readable message from a GraphQL transport error or userErrors list. */
 function shopifyErrorMessage(err) {
-  const data = err.response?.data;
-  if (data?.errors) {
-    if (typeof data.errors === "string") return data.errors;
-    try { return JSON.stringify(data.errors); } catch { /* ignore */ }
+  if (err?.response?.data?.errors) {
+    const e = err.response.data.errors;
+    if (typeof e === "string") return e;
+    if (Array.isArray(e)) return e.map((x) => x.message).join("; ");
+    try { return JSON.stringify(e); } catch { /* ignore */ }
   }
-  return err.message || "Unknown Shopify error";
+  if (err?.response?.status === 401 || err?.response?.status === 403) return "invalid access token or insufficient scopes";
+  return err?.message || "Unknown Shopify error";
 }
 
 /**
- * Build a thin REST Admin API client bound to one store.
+ * Thin GraphQL Admin API client bound to one store.
+ * The GraphQL Admin API is Shopify's current, supported API (the REST product
+ * endpoints are legacy as of 2024-10), so all catalog writes go through here.
  * cfg = { shop, token, apiVersion }
  */
 function createClient({ shop, token, apiVersion }) {
@@ -23,45 +27,29 @@ function createClient({ shop, token, apiVersion }) {
     timeout: 30000,
   });
 
+  async function graphql(query, variables = {}) {
+    const { data } = await http.post("/graphql.json", { query, variables });
+    // GraphQL returns HTTP 200 even for query-level errors (auth, throttling, bad fields).
+    if (data.errors && data.errors.length) {
+      throw new Error(data.errors.map((e) => e.message).join("; "));
+    }
+    return data.data;
+  }
+
   return {
+    graphql,
+
+    // Used by "Test connection".
     async shopInfo() {
-      const { data } = await http.get("/shop.json");
+      const data = await graphql(`{ shop { name email myshopifyDomain } }`);
       return data.shop;
     },
-    async locations() {
-      const { data } = await http.get("/locations.json");
-      return data.locations || [];
-    },
-    async getProduct(id) {
-      const { data } = await http.get(`/products/${id}.json`);
-      return data.product;
-    },
-    async createProduct(product) {
-      const { data } = await http.post("/products.json", { product });
-      return data.product;
-    },
-    async updateProduct(id, product) {
-      const { data } = await http.put(`/products/${id}.json`, { product: { id, ...product } });
-      return data.product;
-    },
-    async listImages(productId) {
-      const { data } = await http.get(`/products/${productId}/images.json`);
-      return data.images || [];
-    },
-    async deleteImage(productId, imageId) {
-      await http.delete(`/products/${productId}/images/${imageId}.json`);
-    },
-    async addImage(productId, src) {
-      const { data } = await http.post(`/products/${productId}/images.json`, { image: { src } });
-      return data.image;
-    },
-    async setInventory({ locationId, inventoryItemId, available }) {
-      const { data } = await http.post("/inventory_levels/set.json", {
-        location_id: locationId,
-        inventory_item_id: inventoryItemId,
-        available: Math.max(0, Math.floor(available || 0)),
-      });
-      return data.inventory_level;
+
+    // First active location (needed to set inventory).
+    async primaryLocationId() {
+      const data = await graphql(`{ locations(first: 10) { nodes { id name } } }`);
+      const nodes = data.locations?.nodes || [];
+      return nodes[0]?.id || null;
     },
   };
 }

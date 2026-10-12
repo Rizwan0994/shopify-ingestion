@@ -25,7 +25,7 @@ export default function Settings() {
   function loadStore() {
     api.get("/store").then((s) => {
       setStore(s);
-      setForm({ shopifyDomain: s.shopifyDomain || "", accessToken: "", apiVersion: s.apiVersion || "2024-10" });
+      setForm({ shopifyDomain: s.shopifyDomain || "", accessToken: "", apiVersion: s.apiVersion || "2026-10" });
     }).catch((e) => toast.error(e.message));
   }
   useEffect(loadStore, []); // eslint-disable-line
@@ -121,7 +121,8 @@ export default function Settings() {
             </div>
             <div>
               <label className="label">API version</label>
-              <input className="input max-w-[180px]" value={form.apiVersion} onChange={setF("apiVersion")} placeholder="2024-10" />
+              <input className="input max-w-[180px]" value={form.apiVersion} onChange={setF("apiVersion")} placeholder="2026-10" />
+              <p className="mt-1 text-xs text-ink-400">Latest stable Shopify Admin API (GraphQL).</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-3 pt-1">
@@ -150,11 +151,23 @@ export default function Settings() {
           <div className="mb-3 flex items-center gap-2 text-brand-700">
             <Info size={18} /> <h4 className="font-semibold">How to get a token</h4>
           </div>
-          <ol className="space-y-2.5 text-sm text-ink-600">
-            <li className="flex gap-2.5"><Step n={1} /> In Shopify admin, open <b className="font-semibold">Settings → Apps and sales channels → Develop apps</b>.</li>
-            <li className="flex gap-2.5"><Step n={2} /> Create an app, then under <b className="font-semibold">Configuration</b> grant <b className="font-semibold">write_products</b> and <b className="font-semibold">write_inventory</b>.</li>
-            <li className="flex gap-2.5"><Step n={3} /> Install the app and copy the <b className="font-semibold">Admin API access token</b> (starts with <code className="rounded bg-ink-100 px-1">shpat_</code>).</li>
-            <li className="flex gap-2.5"><Step n={4} /> Paste it here with your <code className="rounded bg-ink-100 px-1">.myshopify.com</code> domain.</li>
+          <ol className="space-y-3 text-sm leading-relaxed text-ink-600">
+            <li className="flex gap-3">
+              <Step n={1} />
+              <span>In your Shopify admin, go to <b className="font-semibold text-ink-700">Settings → Apps and sales channels → Develop apps</b>.</span>
+            </li>
+            <li className="flex gap-3">
+              <Step n={2} />
+              <span>Create an app. Under <b className="font-semibold text-ink-700">Configuration</b>, grant the <b className="font-semibold text-ink-700">write_products</b> and <b className="font-semibold text-ink-700">write_inventory</b> scopes.</span>
+            </li>
+            <li className="flex gap-3">
+              <Step n={3} />
+              <span>Install the app, then copy the <b className="font-semibold text-ink-700">Admin API access token</b> (it starts with <code className="rounded bg-ink-100 px-1 text-xs">shpat_</code>).</span>
+            </li>
+            <li className="flex gap-3">
+              <Step n={4} />
+              <span>Paste the token above, along with your <code className="rounded bg-ink-100 px-1 text-xs">.myshopify.com</code> store domain, then click Save.</span>
+            </li>
           </ol>
           <div className="mt-4 rounded-xl border border-ink-200 bg-white px-3.5 py-2.5 text-xs text-ink-500">
             Your token is encrypted at rest and never shown again after saving.

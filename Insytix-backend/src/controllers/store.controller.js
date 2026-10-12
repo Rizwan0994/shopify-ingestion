@@ -51,7 +51,7 @@ const test = asyncHandler(async (req, res) => {
   try {
     const client = createClient({ shop: domain, token, apiVersion });
     const shop = await client.shopInfo();
-    return ok(res, { ok: true, shopName: shop.name, shopDomain: shop.myshopify_domain, email: shop.email });
+    return ok(res, { ok: true, shopName: shop.name, shopDomain: shop.myshopifyDomain, email: shop.email });
   } catch (err) {
     throw new ApiError(422, `Could not connect to Shopify: ${shopifyErrorMessage(err)}`);
   }

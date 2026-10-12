@@ -27,7 +27,7 @@ src/
 ├── models/                  Repositories (tenant, user, supplier, product, ingestion run)
 ├── services/
 │   ├── ingestion/           parseFeed → columnMap → normalize → ftpClient → ingest
-│   └── shopify/             client (REST) + syncProduct
+│   └── shopify/             client (GraphQL) + syncProduct
 ├── controllers/             auth, dashboard, supplier, product, store
 ├── routes/                  /api/* routers
 ├── scripts/ftpDemoServer.js Bundled demo FTP server
@@ -67,7 +67,7 @@ Base URL: `http://localhost:8080/api`. All responses are `{ success, data }` or
 | GET | `/products` | Query: `search, supplierId, category, status, syncStatus, type, page, pageSize` |
 | GET | `/products/meta/filters` | Filter option values |
 | GET | `/products/:id` | Detail with variants, images, components |
-| POST | `/products/:id/sync` | Sync this product to Shopify (REST) |
+| POST | `/products/:id/sync` | Sync this product to Shopify (GraphQL Admin API) |
 
 ### Store (Shopify connection)
 | Method | Path | Notes |
@@ -94,8 +94,13 @@ The same `ingestBuffer` function powers both the CSV-upload and FTP-fetch paths,
 
 ## How Shopify sync works
 
-`syncProduct` builds the REST product payload (`title, body_html, vendor, product_type=category,
-status, options, images[], variants[]`), creates or updates the product
-(`POST/PUT /admin/api/<ver>/products.json`), replaces its images, then sets per-variant inventory
-at the store's primary location (`/inventory_levels/set.json`). Shopify ids are written back to
-the product and its variants.
+Sync uses the **GraphQL Admin API** (Shopify's current, supported API — the REST product
+endpoints are legacy as of 2024-10), on the latest version (`2026-10` by default).
+
+`syncProduct` builds a `ProductSetInput` (title, descriptionHtml, vendor, `productType` = the
+supplier's category, status, declarative options + variants with `optionValues`, prices, barcodes,
+and image `files`) and runs one **`productSet`** mutation — which creates or updates the product
+declaratively (matched by its stored Shopify id). It then sets per-variant stock at the store's
+primary location with **`inventorySetQuantities`** (`ignoreCompareQuantity: true`). Eligible
+products publish as `ACTIVE`, otherwise `DRAFT`. Shopify ids are written back to the product and
+its variants.

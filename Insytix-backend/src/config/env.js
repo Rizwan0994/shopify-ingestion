@@ -27,7 +27,7 @@ const config = {
     .map((s) => s.trim())
     .filter(Boolean),
 
-  shopifyApiVersion: process.env.SHOPIFY_API_VERSION || "2024-10",
+  shopifyApiVersion: process.env.SHOPIFY_API_VERSION || "2026-10",
 
   ftpDemo: {
     port: Number(process.env.FTP_DEMO_PORT) || 2121,

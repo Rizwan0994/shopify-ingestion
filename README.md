@@ -6,7 +6,7 @@ Insytix lets a merchant (tenant) sign up, connect their suppliers, and publish p
 their Shopify store. Each supplier's catalog is imported — by **CSV upload** or a direct
 **FTP/SFTP feed** — then automatically normalized into products, variants, bundles and images,
 keeping the supplier's **own categories**. Eligible products can be pushed to Shopify one at a
-time through the REST Admin API.
+time through the GraphQL Admin API.
 
 This is a focused, self-contained rebuild of a larger production system, scoped for a mid-term
 evaluation demo. It runs end-to-end on a single machine with **no external database or services**.
@@ -27,7 +27,7 @@ fyp/
 | **Suppliers** | Add suppliers **directly** (no admin approval) by **CSV upload** or **FTP/SFTP feed** (host, port, protocol, credentials, file path), with a live "Test connection". |
 | **Ingestion & normalization** | One pipeline parses the feed, auto-detects columns, groups **variants**, detects **bundles** (with components & buildable stock), aggregates **images**, and keeps the supplier's **categories verbatim**. |
 | **Products** | Searchable, filterable catalog (supplier, category, status, sync state, type) with a detail drawer showing variants, images, components and publish eligibility. |
-| **Shopify sync** | Connect a store with an Admin API token, then **sync a single product** to Shopify via REST (product + variants + images + inventory). Eligible → *Active*, otherwise → *Draft*. |
+| **Shopify sync** | Connect a store with an Admin API token, then **sync a single product** to Shopify via the **GraphQL Admin API** (latest version, `productSet` + inventory). Eligible → *Active*, otherwise → *Draft*. |
 | **Dashboard** | Live counts, products-by-category and catalog-by-supplier charts, and a recent-imports feed. |
 
 ---

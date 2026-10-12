@@ -14,11 +14,11 @@ function getConnection(tenant) {
   return { shop: tenant.shopify_domain, token, apiVersion: tenant.shopify_api_version || config.shopifyApiVersion };
 }
 
-function priceString(v) {
-  return v !== null && v !== undefined && Number(v) > 0 ? Number(v).toFixed(2) : "0.00";
-}
+const numericId = (gid) => String(gid || "").split("/").pop();
+const productGid = (id) => `gid://shopify/Product/${numericId(id)}`;
+const priceString = (v) => (v !== null && v !== undefined && Number(v) > 0 ? Number(v).toFixed(2) : "0.00");
 
-/** Derive the option-name array (max 3) consistent across all variants. */
+/** Option names (max 3) consistent across all variants. */
 function deriveOptionNames(variants) {
   const names = [];
   for (let i = 1; i <= 3; i++) {
@@ -28,61 +28,79 @@ function deriveOptionNames(variants) {
   return names;
 }
 
-/** Build the Shopify product payload (REST shape) from an Insytix product graph. */
-function buildProductPayload(product, status) {
+/** Build the ProductSetInput for the GraphQL productSet mutation. */
+function buildProductSetInput(product, status, { includeId, includeFiles }) {
   const optionNames = deriveOptionNames(product.variants);
+  const hasOptions = optionNames.length > 0;
+
+  // Declarative options: real option axes, or a single default "Title" option.
+  const productOptions = hasOptions
+    ? optionNames.map((name, i) => {
+        const values = [...new Set(product.variants.map((v) => v[`option${i + 1}_value`] || "Default"))];
+        return { name, position: i + 1, values: values.map((name) => ({ name })) };
+      })
+    : [{ name: "Title", position: 1, values: [{ name: "Default Title" }] }];
 
   const variants = product.variants.map((v) => {
+    const optionValues = hasOptions
+      ? optionNames.map((name, i) => ({ optionName: name, name: v[`option${i + 1}_value`] || "Default" }))
+      : [{ optionName: "Title", name: "Default Title" }];
     const row = {
       sku: v.sku,
       price: priceString(v.price),
-      inventory_management: "shopify",
-      inventory_policy: "deny",
-      requires_shipping: true,
-      fulfillment_service: "manual",
+      optionValues,
+      inventoryItem: { tracked: true },
+      inventoryPolicy: "DENY",
     };
     if (v.compare_at_price && v.price && v.compare_at_price > v.price) {
-      row.compare_at_price = Number(v.compare_at_price).toFixed(2);
+      row.compareAtPrice = Number(v.compare_at_price).toFixed(2);
     }
     if (v.barcode) row.barcode = v.barcode;
-    // Assign option values when the product has named options.
-    optionNames.forEach((_, idx) => {
-      row[`option${idx + 1}`] = v[`option${idx + 1}_value`] || "Default";
-    });
     return row;
   });
 
-  const payload = {
+  const input = {
     title: product.title || product.variants[0]?.sku || "Untitled product",
-    body_html: product.description || "",
+    descriptionHtml: product.description || "",
     vendor: product.vendor || product.supplier_name || "",
-    product_type: product.category || "", // supplier's own category, verbatim
-    status, // 'active' | 'draft'
+    productType: product.category || "", // supplier's own category, verbatim
+    status, // ACTIVE | DRAFT
+    productOptions,
     variants,
   };
-  if (optionNames.length) payload.options = optionNames.map((name) => ({ name }));
-
-  // Only http(s) images can be fetched by Shopify.
-  const imageSrcs = product.images.map((i) => i.src).filter((s) => /^https?:\/\//i.test(s));
-  if (imageSrcs.length) payload.images = imageSrcs.map((src) => ({ src }));
-
-  return payload;
-}
-
-async function resolveLocationId(client, tenant) {
-  if (tenant.shopify_location_id) return tenant.shopify_location_id;
-  const locations = await client.locations();
-  const active = locations.find((l) => l.active) || locations[0];
-  if (active) {
-    tenantRepo.setLocation(tenant.id, String(active.id));
-    return String(active.id);
+  if (includeId) input.id = productGid(product.shopify_product_id);
+  if (includeFiles) {
+    const files = product.images
+      .map((i) => i.src)
+      .filter((s) => /^https?:\/\//i.test(s))
+      .map((src) => ({ originalSource: src, contentType: "IMAGE" }));
+    if (files.length) input.files = files;
   }
-  return null;
+  return input;
 }
+
+const PRODUCT_SET_MUTATION = `
+  mutation productSet($input: ProductSetInput!, $synchronous: Boolean!) {
+    productSet(input: $input, synchronous: $synchronous) {
+      product {
+        id
+        status
+        variants(first: 100) { nodes { id sku inventoryItem { id } } }
+      }
+      userErrors { field message }
+    }
+  }`;
+
+const INVENTORY_SET_MUTATION = `
+  mutation inventorySetQuantities($input: InventorySetQuantitiesInput!) {
+    inventorySetQuantities(input: $input) {
+      userErrors { field message }
+    }
+  }`;
 
 /**
- * Sync one product (with all its variants & images) to Shopify via the REST Admin API.
- * Creates or updates the product, replaces images, and sets per-variant inventory.
+ * Sync one product (with variants & images) to Shopify via the GraphQL Admin API.
+ * Uses productSet (declarative create/update) then inventorySetQuantities for stock.
  */
 async function syncProductToShopify(tenant, productId) {
   const product = productRepo.getForSync(tenant.id, productId);
@@ -90,32 +108,21 @@ async function syncProductToShopify(tenant, productId) {
 
   const conn = getConnection(tenant);
   if (!conn) throw new ApiError(400, "Connect your Shopify store in Settings → Store first.");
-
   if (!product.variants.length) throw new ApiError(422, "Product has no variants to sync.");
 
-  // Eligible products publish as active; otherwise they go up as draft (with the reason recorded).
-  const status = product.eligible ? "active" : "draft";
+  // Eligible products publish as ACTIVE; otherwise they go up as DRAFT.
+  const status = product.eligible ? "ACTIVE" : "DRAFT";
+  const isUpdate = !!product.shopify_product_id;
   const client = createClient(conn);
-  const payload = buildProductPayload(product, status);
 
-  let shopifyProduct;
+  const input = buildProductSetInput(product, status, { includeId: isUpdate, includeFiles: !isUpdate });
+
+  let result;
   try {
-    if (product.shopify_product_id) {
-      // Merge existing Shopify variant ids by sku so we update rather than duplicate.
-      let existing = null;
-      try { existing = await client.getProduct(product.shopify_product_id); } catch { existing = null; }
-      if (existing) {
-        const idBySku = {};
-        (existing.variants || []).forEach((v) => { idBySku[v.sku] = v.id; });
-        payload.variants = payload.variants.map((v) => (idBySku[v.sku] ? { ...v, id: idBySku[v.sku] } : v));
-        shopifyProduct = await client.updateProduct(product.shopify_product_id, payload);
-        await replaceImages(client, shopifyProduct.id, payload.images || []);
-      } else {
-        shopifyProduct = await client.createProduct(payload);
-      }
-    } else {
-      shopifyProduct = await client.createProduct(payload);
-    }
+    const data = await client.graphql(PRODUCT_SET_MUTATION, { input, synchronous: true });
+    const errors = data.productSet?.userErrors || [];
+    if (errors.length) throw new Error(errors.map((e) => `${(e.field || []).join(".")} ${e.message}`.trim()).join("; "));
+    result = data.productSet.product;
   } catch (err) {
     const message = shopifyErrorMessage(err);
     productRepo.updateSyncResult(product.id, { syncStatus: "error", syncError: message });
@@ -123,49 +130,59 @@ async function syncProductToShopify(tenant, productId) {
   }
 
   // Write back Shopify ids (match returned variants to ours by sku).
-  const variantBySku = {};
-  (shopifyProduct.variants || []).forEach((v) => { variantBySku[v.sku] = v; });
+  const returned = result.variants?.nodes || [];
+  const bySku = {};
+  returned.forEach((v) => { bySku[v.sku] = v; });
   for (const v of product.variants) {
-    const sv = variantBySku[v.sku];
-    if (sv) productRepo.updateVariantShopify(v.id, { shopifyVariantId: String(sv.id), shopifyInventoryItemId: String(sv.inventory_item_id) });
+    const sv = bySku[v.sku];
+    if (sv) {
+      productRepo.updateVariantShopify(v.id, {
+        shopifyVariantId: numericId(sv.id),
+        shopifyInventoryItemId: sv.inventoryItem ? numericId(sv.inventoryItem.id) : null,
+      });
+    }
   }
 
-  // Push inventory per variant at the primary location (best-effort — never fails the sync).
+  // Set inventory per variant at the primary location (best-effort — never fails the sync).
   let inventoryWarning = null;
   try {
-    const locationId = await resolveLocationId(client, tenant);
-    if (locationId) {
-      for (const v of product.variants) {
-        const sv = variantBySku[v.sku];
-        if (sv?.inventory_item_id) {
-          await client.setInventory({ locationId, inventoryItemId: sv.inventory_item_id, available: v.quantity });
-        }
+    let locationId = tenant.shopify_location_id;
+    if (!locationId) {
+      locationId = await client.primaryLocationId();
+      if (locationId) tenantRepo.setLocation(tenant.id, locationId);
+    }
+    const quantities = [];
+    for (const v of product.variants) {
+      const sv = bySku[v.sku];
+      if (locationId && sv?.inventoryItem?.id) {
+        quantities.push({ inventoryItemId: sv.inventoryItem.id, locationId, quantity: Math.max(0, Math.floor(v.quantity || 0)) });
       }
+    }
+    if (quantities.length) {
+      const inv = await client.graphql(INVENTORY_SET_MUTATION, {
+        input: { name: "available", reason: "correction", ignoreCompareQuantity: true, quantities },
+      });
+      const invErrors = inv.inventorySetQuantities?.userErrors || [];
+      if (invErrors.length) inventoryWarning = invErrors.map((e) => e.message).join("; ");
     }
   } catch (err) {
     inventoryWarning = shopifyErrorMessage(err);
   }
 
   productRepo.updateSyncResult(product.id, {
-    shopifyProductId: String(shopifyProduct.id),
-    shopifyStatus: status,
+    shopifyProductId: numericId(result.id),
+    shopifyStatus: status.toLowerCase(),
     syncStatus: "synced",
     syncError: null,
   });
 
   return {
-    shopifyProductId: String(shopifyProduct.id),
-    status,
-    variantsSynced: (shopifyProduct.variants || []).length,
-    imagesSynced: (payload.images || []).length,
+    shopifyProductId: numericId(result.id),
+    status: status.toLowerCase(),
+    variantsSynced: returned.length,
+    imagesSynced: (input.files || []).length,
     inventoryWarning,
   };
-}
-
-async function replaceImages(client, productId, images) {
-  const existing = await client.listImages(productId).catch(() => []);
-  for (const img of existing) await client.deleteImage(productId, img.id).catch(() => {});
-  for (const img of images) await client.addImage(productId, img.src).catch(() => {});
 }
 
 module.exports = { syncProductToShopify, getConnection };
