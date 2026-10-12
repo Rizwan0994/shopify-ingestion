@@ -1,0 +1,17 @@
+sku,title,description,category,brand,price,compare_at_price,quantity,image_url,group_key,color,size,barcode,type,components
+CM-SOFA-100,Aspen 3-Seater Sofa,"Mid-century 3-seater sofa with solid oak legs and stain-resistant fabric.",Living Room > Sofas,Insytix Home,549.00,799.00,12,https://picsum.photos/seed/CM-SOFA-100/600/600,,,,SO100100100,,
+LOVE-110,Aspen Loveseat,"Matching 2-seater loveseat from the Aspen collection.",Living Room > Sofas,Insytix Home,449.00,649.00,10,https://picsum.photos/seed/LOVE-110/600/600,,,,SO110110110,,
+CTBL-120,Aspen Coffee Table,"Solid oak coffee table with a lower storage shelf.",Living Room > Tables,Insytix Home,199.00,299.00,15,https://picsum.photos/seed/CTBL-120/600/600,,,,SO120120120,,
+DC-200-OAK,Nordic Dining Chair,"Ergonomic dining chair with a bent-ply seat.",Dining > Chairs,Nordic Living,89.00,129.00,40,https://picsum.photos/seed/DC-200-OAK/600/600,DC-200,Oak,,DC200OAK001,,
+DC-200-WAL,Nordic Dining Chair,"Ergonomic dining chair with a bent-ply seat.",Dining > Chairs,Nordic Living,89.00,129.00,25,https://picsum.photos/seed/DC-200-WAL/600/600,DC-200,Walnut,,DC200WAL001,,
+DC-200-BLK,Nordic Dining Chair,"Ergonomic dining chair with a bent-ply seat.",Dining > Chairs,Nordic Living,89.00,129.00,0,https://picsum.photos/seed/DC-200-BLK/600/600,DC-200,Black,,DC200BLK001,,
+BED-300-Q-GRY,Haven Upholstered Bed,"Upholstered platform bed with a padded headboard.",Bedroom > Beds,Haven,599.00,849.00,8,https://picsum.photos/seed/BED-300-Q-GRY/600/600,BED-300,Grey,Queen,BED300QGRY01,,
+BED-300-K-GRY,Haven Upholstered Bed,"Upholstered platform bed with a padded headboard.",Bedroom > Beds,Haven,699.00,949.00,5,https://picsum.photos/seed/BED-300-K-GRY/600/600,BED-300,Grey,King,BED300KGRY01,,
+BED-300-Q-BEI,Haven Upholstered Bed,"Upholstered platform bed with a padded headboard.",Bedroom > Beds,Haven,599.00,849.00,0,https://picsum.photos/seed/BED-300-Q-BEI/600/600,BED-300,Beige,Queen,BED300QBEI01,,
+BED-300-K-BEI,Haven Upholstered Bed,"Upholstered platform bed with a padded headboard.",Bedroom > Beds,Haven,699.00,949.00,3,https://picsum.photos/seed/BED-300-K-BEI/600/600,BED-300,Beige,King,BED300KBEI01,,
+NSTD-130,Nordic Nightstand,"Two-drawer nightstand with soft-close runners.",Bedroom > Nightstands,Nordic Living,129.00,179.00,0,https://picsum.photos/seed/NSTD-130/600/600,,,,NS130130130,,
+LAMP-400,Arc Floor Lamp,"Adjustable arc floor lamp with a marble base.",Lighting > Floor Lamps,Lumen,120.00,160.00,10,,,,,LMP400400400,,
+RUG-500,Souk Hand-Knotted Rug,"Hand-knotted wool rug, 5 x 8 ft.",Decor > Rugs,Souk,275.00,399.00,0,https://picsum.photos/seed/RUG-500/600/600,,,,RG500500500,,
+VASE-600,Terra Ceramic Vase,"Matte terracotta vase, handmade.",Decor > Vases,Terra,,,5,https://picsum.photos/seed/VASE-600/600/600,,,,VS600600600,,
+LR-SET-900,Aspen Living Room Set (3-Piece),"Complete Aspen living room set: sofa, loveseat and coffee table.",Living Room > Sets,Insytix Home,1299.00,1799.00,,https://picsum.photos/seed/LR-SET-900/600/600,,,,LR900900900,bundle,CM-SOFA-100:1;LOVE-110:1;CTBL-120:1
+BR-SET-950,Nordic Bedroom Set,"Haven bed with two matching Nordic nightstands.",Bedroom > Sets,Haven,1599.00,2099.00,,https://picsum.photos/seed/BR-SET-950/600/600,,,,BR950950950,bundle,BED-300-Q-GRY:1;NSTD-130:2
