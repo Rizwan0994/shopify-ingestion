@@ -24,7 +24,7 @@ fyp/
 | Area | What it does |
 |------|--------------|
 | **Tenant signup (SaaS)** | Self-serve registration creates a workspace + owner login (JWT auth). Fully multi-tenant — every record is scoped to its tenant. |
-| **Suppliers** | Add suppliers **directly** (no admin approval) by **CSV upload** or **FTP/SFTP feed** (host, port, protocol, credentials, file path), with a live "Test connection". |
+| **Suppliers** | Add suppliers **directly** (no admin approval) by **CSV/Excel upload** or **FTP/SFTP feed** (host, port, protocol, credentials, file path), with a live "Test connection". Feeds can be `.csv`, `.tsv` or `.xlsx`. |
 | **Ingestion & normalization** | One pipeline parses the feed, auto-detects columns, groups **variants**, detects **bundles** (with components & buildable stock), aggregates **images**, and keeps the supplier's **categories verbatim**. |
 | **Products** | Searchable, filterable catalog (supplier, category, status, sync state, type) with a detail drawer showing variants, images, components and publish eligibility. |
 | **Shopify sync** | Connect a store with an Admin API token, then **sync a single product** to Shopify via the **GraphQL Admin API** (latest version, `productSet` + inventory). Eligible → *Active*, otherwise → *Draft*. |

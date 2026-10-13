@@ -94,7 +94,7 @@ export default function Suppliers() {
 
   return (
     <div className="space-y-5">
-      <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" className="hidden" onChange={onFile} />
+      <input ref={fileRef} type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" className="hidden" onChange={onFile} />
 
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-ink-500">

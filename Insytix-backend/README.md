@@ -79,7 +79,7 @@ Base URL: `http://localhost:8080/api`. All responses are `{ success, data }` or
 
 ## How ingestion works
 
-`parseFeed` (delimiter-sniffing CSV/TSV parse) → `columnMap` (explicit overrides, else header
+`parseFeed` (auto-detects **CSV/TSV or Excel .xlsx/.xls** by magic bytes) → `columnMap` (explicit overrides, else header
 heuristics for sku/title/price/qty/category/image/options/components) → `normalize`:
 
 - Rows are grouped into products: a shared **group key** → one product with multiple **variants**

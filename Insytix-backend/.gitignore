@@ -4,3 +4,6 @@ uploads/
 .env
 *.log
 .DS_Store
+
+# Real supplier data kept local only (contains wholesale costs) — not for the public repo.
+src/sample-data/kmhome-feed.xlsx

@@ -104,7 +104,7 @@ export default function ProductDetail({ productId, onClose, onChanged }) {
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge status={product.status} />
                 <SyncBadge status={product.sync_status} />
-                {product.is_bundle && <Badge className="bg-amber-500/10 text-amber-600"><Boxes size={13} /> Bundle</Badge>}
+                {!!product.is_bundle && <Badge className="bg-amber-500/10 text-amber-600"><Boxes size={13} /> Bundle</Badge>}
                 {product.vendor && <Badge className="bg-ink-100 text-ink-600">{product.vendor}</Badge>}
               </div>
 
@@ -164,7 +164,7 @@ export default function ProductDetail({ productId, onClose, onChanged }) {
           </section>
 
           {/* Bundle components */}
-          {product.is_bundle && product.components.length > 0 && (
+          {!!product.is_bundle && product.components.length > 0 && (
             <section>
               <h4 className="mb-2 text-sm font-semibold text-ink-900">Components included ({product.components.length})</h4>
               <ul className="divide-y divide-ink-100 overflow-hidden rounded-xl border border-ink-100">
